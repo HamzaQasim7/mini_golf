@@ -91,7 +91,10 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) {
-                      return const AddPlayersScreen();
+                      return const AddPlayersScreen(
+                        courseName: '',
+                        numberOfHoles: null,
+                      );
                     },
                   ),
                 );

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:mini_golf/features/game/presentation/pages/score_card_screen.dart';
 import 'package:mini_golf/widgets/custom_button.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../data/models/player_model.dart';
+import '../providers/game_provider.dart';
 
 class HoleScoreScreen extends StatefulWidget {
   final int holeNumber;
@@ -20,15 +22,142 @@ class HoleScoreScreen extends StatefulWidget {
 }
 
 class _HoleScoreScreenState extends State<HoleScoreScreen> {
-  final Map<String, String> scores = {};
+  final Map<String, TextEditingController> _controllers = {};
+  final Map<String, int?> _scores = {};
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    for (var player in widget.players) {
-      scores[player.name] = '';
+    _initializeControllers();
+  }
+
+  void _initializeControllers() {
+    final gameProvider = Provider.of<GameProvider>(context, listen: false);
+    final game = gameProvider.currentGame;
+
+    if (game != null) {
+      for (var player in game.players) {
+        _controllers[player.name] = TextEditingController();
+        _scores[player.name] = player.getScoreForHole(widget.holeNumber);
+
+        // Pre-fill if score already exists
+        if (_scores[player.name] != null) {
+          _controllers[player.name]!.text = _scores[player.name].toString();
+        }
+      }
     }
   }
+
+  @override
+  void dispose() {
+    for (var controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  bool _canProceed() {
+    return _scores.values.every((score) => score != null && score > 0);
+  }
+
+  Color _getPlayerColor(String colorHex) {
+    try {
+      return Color(int.parse(colorHex.replaceFirst('#', '0xFF')));
+    } catch (e) {
+      return Colors.white;
+    }
+  }
+
+  Future<void> _saveScores() async {
+    if (!_canProceed() || _isSaving) return;
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      final gameProvider = Provider.of<GameProvider>(context, listen: false);
+      final validScores = _scores.entries
+          .where((entry) => entry.value != null)
+          .map((entry) => MapEntry(entry.key, entry.value!))
+          .fold<Map<String, int>>({}, (map, entry) {
+            map[entry.key] = entry.value;
+            return map;
+          });
+
+      await gameProvider.addHoleScores(widget.holeNumber, validScores);
+
+      if (gameProvider.error != null) {
+        throw Exception(gameProvider.error);
+      }
+
+      if (mounted) {
+        _navigateNext();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save scores: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  void _navigateNext() {
+    final gameProvider = Provider.of<GameProvider>(context, listen: false);
+    final currentHole = gameProvider.getCurrentHole();
+    final isComplete = gameProvider.isGameComplete();
+
+    if (isComplete) {
+      // Game is complete, show scorecard
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const ScorecardScreen()),
+      );
+    } else {
+      // Go to next hole
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => HoleScoreScreen(holeNumber: currentHole),
+        ),
+      );
+    }
+  }
+
+  void _navigatePrevious() {
+    if (widget.holeNumber > 1) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) => HoleScoreScreen(holeNumber: widget.holeNumber - 1),
+        ),
+      );
+    } else {
+      Navigator.pop(context);
+    }
+  }
+
+  final Map<String, String> scores = {};
+
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   for (var player in widget.players) {
+  //     scores[player.name] = '';
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {

@@ -9,6 +9,7 @@ class PlayerInputCard extends StatelessWidget {
   final Color? selectedColor;
   final List<Color> availableColors;
   final Function(Color) onColorSelected;
+  final TextEditingController controller;
 
   const PlayerInputCard({
     super.key,
@@ -17,6 +18,7 @@ class PlayerInputCard extends StatelessWidget {
     required this.selectedColor,
     required this.availableColors,
     required this.onColorSelected,
+    required this.controller,
   });
 
   @override
@@ -27,6 +29,7 @@ class PlayerInputCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           TextField(
+            controller: controller,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
               hintText: 'Player ${index + 1}',
