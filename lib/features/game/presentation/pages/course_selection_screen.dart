@@ -2,8 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../widgets/custom_button.dart';
-import '../../../../widgets/hole_option_button.dart';
 import 'add_player_screen.dart';
+
+class Course {
+  final String name;
+  final String imageUrl;
+  final int holes;
+
+  Course({required this.name, required this.imageUrl, required this.holes});
+}
 
 class CourseSelectionScreen extends StatefulWidget {
   const CourseSelectionScreen({super.key});
@@ -13,14 +20,21 @@ class CourseSelectionScreen extends StatefulWidget {
 }
 
 class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
-  String courseName = '';
-  int selectedHoles = 9;
+  // Mocked list of courses
+  final List<Course> courses = [
+    Course(
+      name: 'Blastzone Mini Golf',
+      imageUrl: 'assets/images/mini-golf.jpg',
+      holes: 18,
+    ),
+    Course(
+      name: 'Crazy Mini Golf',
+      imageUrl: 'assets/images/crazy_mini_golf.jpg',
+      holes: 18,
+    ),
+  ];
 
-  void _selectHoles(int holes) {
-    setState(() {
-      selectedHoles = holes;
-    });
-  }
+  int selectedIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -41,61 +55,78 @@ class _CourseSelectionScreenState extends State<CourseSelectionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Course Name (optional)',
-                hintStyle: const TextStyle(color: AppColors.greyB3),
-                filled: true,
-                fillColor: const Color(0xFF1D2A23),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-              ),
-              onChanged: (value) => courseName = value,
-              onTapOutside: (_) {
-                FocusScope.of(context).unfocus();
-              },
-            ),
-            const SizedBox(height: 32),
             const Text(
-              'Number of Holes',
+              'Course',
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary,
               ),
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                HoleOptionButton(
-                  label: '9 Holes',
-                  isSelected: selectedHoles == 9,
-                  onTap: () => _selectHoles(9),
+            const SizedBox(height: 16),
+            // List of courses
+            ...List.generate(courses.length, (index) {
+              final course = courses[index];
+              final isSelected = index == selectedIndex;
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    selectedIndex = index;
+                  });
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color:
+                        isSelected
+                            ? const Color(0xFF1D2A23)
+                            : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                    border:
+                        isSelected
+                            ? Border.all(color: AppColors.primary, width: 1.5)
+                            : null,
+                  ),
+                  child: ListTile(
+                    leading: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.asset(
+                        course.imageUrl,
+                        width: 48,
+                        height: 48,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    title: Text(
+                      course.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    subtitle: Text(
+                      '${course.holes} Holes',
+                      style: const TextStyle(
+                        color: AppColors.greyB3,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 12),
-                HoleOptionButton(
-                  label: '18 Holes',
-                  isSelected: selectedHoles == 18,
-                  onTap: () => _selectHoles(18),
-                ),
-              ],
-            ),
+              );
+            }),
             const Spacer(),
             CustomButton(
               onPressed: () {
+                final selectedCourse = courses[selectedIndex];
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) {
-                      return const AddPlayersScreen(
-                        courseName: '',
-                        numberOfHoles: null,
-                      );
-                    },
+                    builder:
+                        (context) => AddPlayersScreen(
+                          courseName: selectedCourse.name,
+                          numberOfHoles: selectedCourse.holes,
+                        ),
                   ),
                 );
               },

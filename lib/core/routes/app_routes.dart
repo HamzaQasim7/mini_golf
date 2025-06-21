@@ -16,9 +16,7 @@ class AppRouter {
       // // Profile Routes
       case RouteNames.home:
         return MaterialPageRoute(builder: (_) => const HomePage());
-      case RouteNames.addPlayer:
-        return MaterialPageRoute(builder: (_) => const AddPlayersScreen());
-
+      
       // Default - Page Not Found
       default:
         return MaterialPageRoute(
