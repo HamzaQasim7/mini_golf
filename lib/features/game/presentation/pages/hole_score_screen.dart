@@ -3,16 +3,13 @@ import 'package:mini_golf/features/game/presentation/pages/score_card_screen.dar
 import 'package:mini_golf/widgets/custom_button.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../widgets/score_button.dart';
+import 'package:provider/provider.dart';
+import '../providers/game_provider.dart';
 
 class HoleScoreScreen extends StatefulWidget {
   final int holeNumber;
-  final List<String> playerNames;
 
-  const HoleScoreScreen({
-    super.key,
-    this.holeNumber = 1,
-    this.playerNames = const ['Alex', 'Ben', 'Chris'],
-  });
+  const HoleScoreScreen({super.key, this.holeNumber = 1});
 
   @override
   State<HoleScoreScreen> createState() => _HoleScoreScreenState();
@@ -24,7 +21,9 @@ class _HoleScoreScreenState extends State<HoleScoreScreen> {
   @override
   void initState() {
     super.initState();
-    scores = List.filled(widget.playerNames.length, 0);
+    final gameProvider = Provider.of<GameProvider>(context, listen: false);
+    final players = gameProvider.currentGame?.players ?? [];
+    scores = List.filled(players.length, 0);
   }
 
   void _incrementScore(int index) {
@@ -43,6 +42,9 @@ class _HoleScoreScreenState extends State<HoleScoreScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final gameProvider = Provider.of<GameProvider>(context);
+    final players = gameProvider.currentGame?.players ?? [];
+
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
       appBar: AppBar(
@@ -63,7 +65,7 @@ class _HoleScoreScreenState extends State<HoleScoreScreen> {
         child: Column(
           children: [
             const SizedBox(height: 16),
-            ...List.generate(widget.playerNames.length, (index) {
+            ...List.generate(players.length, (index) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 24),
                 child: Row(
@@ -75,7 +77,7 @@ class _HoleScoreScreenState extends State<HoleScoreScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Player ${index + 1}: ${widget.playerNames[index]}',
+                            'Player ${index + 1}: ${players[index].name}',
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
@@ -143,15 +145,25 @@ class _HoleScoreScreenState extends State<HoleScoreScreen> {
                     text: 'Next',
                     backgroundColor: AppColors.primary,
                     textColor: Colors.black,
-                    onPressed: () {
+                    onPressed: () async {
+                      final gameProvider = Provider.of<GameProvider>(
+                        context,
+                        listen: false,
+                      );
+                      final players = gameProvider.currentGame?.players ?? [];
+                      final Map<String, int> playerScores = {
+                        for (int i = 0; i < players.length; i++)
+                          players[i].id: scores[i],
+                      };
+
+                      await gameProvider.addHoleScores(
+                        widget.holeNumber,
+                        playerScores,
+                      );
+
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (_) => ScorecardScreen(
-                            playerNames: widget.playerNames,
-                            scores: scores,
-                          ),
-                        ),
+                        MaterialPageRoute(builder: (_) => ScorecardScreen()),
                       );
                     },
                   ),

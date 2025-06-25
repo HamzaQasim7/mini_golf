@@ -1,232 +1,295 @@
-// lib/providers/game_provider.dart
+// lib/features/game/presentation/providers/game_provider.dart
 import 'package:flutter/material.dart';
-import '../../../../core/services/firebase_game_service.dart';
-import '../../data/models/player_model.dart';
+import 'package:uuid/uuid.dart';
+
+import '../../../../core/database/hive_model.dart';
+import '../../../../core/services/hive_service.dart';
 
 class GameProvider extends ChangeNotifier {
-  final FirebaseGameService _gameService = FirebaseGameService();
-
   Game? _currentGame;
+  List<Game> _gameHistory = [];
+  List<Course> _courses = [];
   bool _isLoading = false;
   String? _error;
 
   // Getters
   Game? get currentGame => _currentGame;
+  List<Game> get gameHistory => _gameHistory;
+  List<Course> get courses => _courses;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  bool get hasGame => _currentGame != null;
+  bool get hasActiveGame => _currentGame != null && !_currentGame!.isCompleted;
 
-  // Create a new game
+  final Uuid _uuid = const Uuid();
+
+  GameProvider() {
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    await _loadCourses();
+    await _loadGameHistory();
+    await _loadCurrentGame();
+  }
+
+  // Course Management
+  Future<void> _loadCourses() async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      final courseBox = HiveService.courseBox;
+
+      // Initialize default courses if empty
+      if (courseBox.isEmpty) {
+        await _initializeDefaultCourses();
+      }
+
+      _courses = courseBox.values.toList();
+      _error = null;
+    } catch (e) {
+      _error = 'Failed to load courses: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _initializeDefaultCourses() async {
+    final defaultCourses = [
+      Course(
+        id: _uuid.v4(),
+        name: 'Blastzone Mini Golf',
+        imageUrl: 'assets/images/mini-golf.jpg',
+        holes: 18,
+        parValues: List.filled(18, 3), // All holes are par 3
+      ),
+      Course(
+        id: _uuid.v4(),
+        name: 'Crazy Mini Golf',
+        imageUrl: 'assets/images/crazy_mini_golf.jpg',
+        holes: 18,
+        parValues: List.filled(18, 3),
+      ),
+    ];
+
+    final courseBox = HiveService.courseBox;
+    for (final course in defaultCourses) {
+      await courseBox.add(course);
+    }
+  }
+
+  // Game Management
   Future<void> createGame({
     required String courseName,
     required int numberOfHoles,
-    required List<Player> players,
+    required List<String> playerNames,
+    required List<String> playerColors,
   }) async {
     try {
-      _setLoading(true);
-      _clearError();
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
 
+      // Create players
+      final players = List.generate(playerNames.length, (index) {
+        return Player(
+          id: _uuid.v4(),
+          name: playerNames[index],
+          colorHex: playerColors[index],
+          createdAt: DateTime.now(),
+        );
+      });
+
+      // Initialize hole scores
+      final holes = List.generate(numberOfHoles, (holeIndex) {
+        return List.generate(players.length, (playerIndex) {
+          return HoleScore(strokes: 0, par: 3); // Default par 3
+        });
+      });
+
+      // Create game
       final game = Game(
-        courseName: courseName.isEmpty ? 'Unnamed Course' : courseName,
+        id: _uuid.v4(),
+        courseName: courseName,
         numberOfHoles: numberOfHoles,
         players: players,
+        holes: holes,
         createdAt: DateTime.now(),
-        lastUpdated: DateTime.now(),
+        currentHole: 1,
       );
 
-      final gameId = await _gameService.createGame(game);
-      _currentGame = game.copyWith(id: gameId);
+      // Save to Hive
+      final gameBox = HiveService.gameBox;
+      await gameBox.add(game);
 
-      notifyListeners();
-    } catch (e) {
-      _setError('Failed to create game: $e');
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // Load existing game
-  Future<void> loadGame(String gameId) async {
-    try {
-      _setLoading(true);
-      _clearError();
-
-      final game = await _gameService.getGame(gameId);
-      _currentGame = game;
-
-      notifyListeners();
-    } catch (e) {
-      _setError('Failed to load game: $e');
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // Add score for a player on current hole
-  Future<void> addScore(String playerName, int hole, int score) async {
-    if (_currentGame == null) return;
-
-    try {
-      _setLoading(true);
-      _clearError();
-
-      await _gameService.addScore(_currentGame!.id!, playerName, hole, score);
-
-      // Update local state
-      final updatedPlayers =
-          _currentGame!.players.map((player) {
-            if (player.name == playerName) {
-              return player.addScore(hole, score);
-            }
-            return player;
-          }).toList();
-
-      _currentGame = _currentGame!.copyWith(
-        players: updatedPlayers,
-        lastUpdated: DateTime.now(),
-      );
-
-      notifyListeners();
-    } catch (e) {
-      _setError('Failed to add score: $e');
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // Add scores for all players on a hole
-  Future<void> addHoleScores(int hole, Map<String, int> playerScores) async {
-    if (_currentGame == null) return;
-
-    try {
-      _setLoading(true);
-      _clearError();
-
-      // Add scores for each player
-      for (final entry in playerScores.entries) {
-        await _gameService.addScore(
-          _currentGame!.id!,
-          entry.key,
-          hole,
-          entry.value,
-        );
+      // Save players
+      final playerBox = HiveService.playerBox;
+      for (final player in players) {
+        await playerBox.add(player);
       }
 
-      // Update local state
-      final updatedPlayers =
-          _currentGame!.players.map((player) {
-            final score = playerScores[player.name];
-            if (score != null) {
-              return player.addScore(hole, score);
-            }
-            return player;
-          }).toList();
-
-      _currentGame = _currentGame!.copyWith(
-        players: updatedPlayers,
-        lastUpdated: DateTime.now(),
-      );
-
-      notifyListeners();
+      _currentGame = game;
+      _gameHistory.insert(0, game);
     } catch (e) {
-      _setError('Failed to add hole scores: $e');
+      _error = 'Failed to create game: $e';
     } finally {
-      _setLoading(false);
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
-  // Complete the game
+  Future<void> updateHoleScore({
+    required int holeIndex,
+    required int playerIndex,
+    required int strokes,
+  }) async {
+    if (_currentGame == null) return;
+
+    try {
+      _currentGame!.holes[holeIndex][playerIndex].strokes = strokes;
+      await _currentGame!.save();
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to update score: $e';
+      notifyListeners();
+    }
+  }
+
+  Future<void> moveToNextHole() async {
+    if (_currentGame == null) return;
+
+    try {
+      if (_currentGame!.currentHole < _currentGame!.numberOfHoles) {
+        _currentGame!.currentHole++;
+        await _currentGame!.save();
+      }
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to move to next hole: $e';
+      notifyListeners();
+    }
+  }
+
+  Future<void> moveToPreviousHole() async {
+    if (_currentGame == null) return;
+
+    try {
+      if (_currentGame!.currentHole > 1) {
+        _currentGame!.currentHole--;
+        await _currentGame!.save();
+      }
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to move to previous hole: $e';
+      notifyListeners();
+    }
+  }
+
   Future<void> completeGame() async {
     if (_currentGame == null) return;
 
     try {
-      _setLoading(true);
-      _clearError();
+      _currentGame!.isCompleted = true;
+      _currentGame!.completedAt = DateTime.now();
+      await _currentGame!.save();
 
-      await _gameService.completeGame(_currentGame!.id!);
+      // Update game history
+      final index = _gameHistory.indexWhere((g) => g.id == _currentGame!.id);
+      if (index != -1) {
+        _gameHistory[index] = _currentGame!;
+      }
 
-      _currentGame = _currentGame!.copyWith(
-        isCompleted: true,
-        completedAt: DateTime.now(),
-      );
+      _currentGame = null;
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to complete game: $e';
+      notifyListeners();
+    }
+  }
+
+  Future<void> _loadGameHistory() async {
+    try {
+      final gameBox = HiveService.gameBox;
+      _gameHistory =
+          gameBox.values.toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    } catch (e) {
+      _error = 'Failed to load game history: $e';
+    }
+  }
+
+  Future<void> _loadCurrentGame() async {
+    try {
+      final gameBox = HiveService.gameBox;
+      _currentGame =
+          gameBox.values
+              .where((game) => !game.isCompleted)
+              .toList()
+              .firstOrNull;
+    } catch (e) {
+      _error = 'Failed to load current game: $e';
+    }
+  }
+
+  Future<void> deleteGame(String gameId) async {
+    try {
+      final gameBox = HiveService.gameBox;
+      final game = gameBox.values.firstWhere((g) => g.id == gameId);
+      await game.delete();
+
+      _gameHistory.removeWhere((g) => g.id == gameId);
+
+      if (_currentGame?.id == gameId) {
+        _currentGame = null;
+      }
 
       notifyListeners();
     } catch (e) {
-      _setError('Failed to complete game: $e');
-    } finally {
-      _setLoading(false);
+      _error = 'Failed to delete game: $e';
+      notifyListeners();
     }
   }
 
-  // Get current hole number
-  int getCurrentHole() {
-    if (_currentGame == null) return 1;
+  // Utility methods
+  List<int> getCurrentHoleScores() {
+    if (_currentGame == null) return [];
 
-    // Find the next hole that needs scores
-    for (int hole = 1; hole <= _currentGame!.numberOfHoles; hole++) {
-      final hasAllScores = _currentGame!.players.every(
-        (player) => player.getScoreForHole(hole) != null,
-      );
-      if (!hasAllScores) {
-        return hole;
-      }
-    }
-
-    return _currentGame!.numberOfHoles; // All holes completed
+    final holeIndex = _currentGame!.currentHole - 1;
+    return _currentGame!.holes[holeIndex]
+        .map((score) => score.strokes)
+        .toList();
   }
 
-  // Check if current hole is complete
-  bool isHoleComplete(int hole) {
+  List<int> getTotalScores() {
+    if (_currentGame == null) return [];
+    return _currentGame!.getTotalScores();
+  }
+
+  Player? getWinner() {
+    return _currentGame?.getWinner();
+  }
+
+  bool canMoveToNextHole() {
     if (_currentGame == null) return false;
 
-    return _currentGame!.players.every(
-      (player) => player.getScoreForHole(hole) != null,
-    );
+    final currentHoleScores = getCurrentHoleScores();
+    return currentHoleScores.every((score) => score > 0);
   }
 
-  // Check if game is complete
-  bool isGameComplete() {
+  bool isLastHole() {
     if (_currentGame == null) return false;
-    return _currentGame!.isGameComplete;
+    return _currentGame!.currentHole == _currentGame!.numberOfHoles;
   }
 
-  // Get leaderboard
-  List<MapEntry<Player, int>> getLeaderboard() {
-    if (_currentGame == null) return [];
-    return _currentGame!.getLeaderboard();
-  }
-
-  // Get winners
-  List<Player> getWinners() {
-    if (_currentGame == null) return [];
-    return _currentGame!.getWinners();
-  }
-
-  // Reset game state
-  void resetGame() {
-    _currentGame = null;
+  void clearError() {
     _error = null;
-    _isLoading = false;
     notifyListeners();
   }
 
-  // Private helper methods
-  void _setLoading(bool loading) {
-    _isLoading = loading;
-    notifyListeners();
-  }
-
-  void _setError(String error) {
-    _error = error;
-    notifyListeners();
-  }
-
-  void _clearError() {
-    _error = null;
-  }
-
-  // Stream game updates
-  Stream<Game?> streamGame(String gameId) {
-    return _gameService.streamGame(gameId);
+  Future<void> refreshData() async {
+    await _loadCourses();
+    await _loadGameHistory();
+    await _loadCurrentGame();
   }
 }

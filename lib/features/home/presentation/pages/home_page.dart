@@ -86,7 +86,7 @@ class HomePage extends StatelessWidget {
             MaterialPageRoute(builder: (_) => const GameHistoryScreen()),
           );
         },
-        child: Icon(Icons.history, color: Colors.white),
+        child: Icon(Icons.history),
       ),
     );
   }

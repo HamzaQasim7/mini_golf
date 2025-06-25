@@ -2,23 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:mini_golf/features/game/presentation/pages/hole_score_screen.dart';
 import 'package:mini_golf/widgets/custom_button.dart';
 import 'package:provider/provider.dart';
+import 'package:mini_golf/features/game/domain/entities/player.dart' as domain;
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../widgets/player_input_card.dart';
 import '../../data/models/player_model.dart';
-import '../providers/game_provider.dart';
-
-import 'package:flutter/material.dart';
-import 'package:mini_golf/features/game/presentation/pages/hole_score_screen.dart';
-import 'package:mini_golf/widgets/custom_button.dart';
-import 'package:provider/provider.dart';
-
-import '../../../../core/theme/app_colors.dart';
-import '../../../../widgets/player_input_card.dart';
-import '../../data/models/player_model.dart';
+import '../pages/spin_wheel_screen.dart';
 import '../providers/game_provider.dart';
 import '../widgets/golf_dimple_painter.dart';
-import '../pages/game_flow_screen.dart';
 import '../widgets/player_count_selector.dart';
 
 class AddPlayersScreen extends StatefulWidget {
@@ -203,19 +193,36 @@ class _AddPlayersScreenState extends State<AddPlayersScreen>
 
     try {
       final validPlayers = _getValidPlayers();
-      final playerNames = validPlayers.map((p) => p.name).toList();
+      final domainPlayers = validPlayers.map(playerModelToDomain).toList();
+      final gameProvider = Provider.of<GameProvider>(context, listen: false);
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder:
-              (_) => GameFlowScreen(
-                courseName: widget.courseName,
-                numberOfHoles: widget.numberOfHoles,
-                playerNames: playerNames,
-              ),
-        ),
+      await gameProvider.createGame(
+        courseName: widget.courseName,
+        players: domainPlayers,
       );
+
+      // After game is created, navigate based on course
+      if (widget.courseName == 'Blastzone Mini Golf') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => HoleScoreScreen()),
+        );
+      } else if (widget.courseName == 'Crazy Mini Golf') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SpinWheelScreen(
+              onTaskSelected: (title, description) {
+                // After spinning, go to HoleScoreScreen
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => HoleScoreScreen()),
+                );
+              },
+            ),
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -503,6 +510,18 @@ class _AddPlayersScreenState extends State<AddPlayersScreen>
       ),
     );
   }
+
+  domain.Player playerModelToDomain(Player model) {
+    return domain.Player(
+      id: '', // You can generate or assign an ID if needed
+      name: model.name,
+      avatar: model.avatar,
+      handicap: model.handicap,
+      colorHex: model.colorHex,
+      createdAt: DateTime.now(),
+      // Add other fields if needed
+    );
+  }
 }
 
 // class AddPlayersScreen extends StatelessWidget {
@@ -613,7 +632,6 @@ class _AddPlayersScreenState extends State<AddPlayersScreen>
 //     );
 //   }
 // }
-
 
 /*
  Wrap(

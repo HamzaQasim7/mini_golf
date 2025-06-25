@@ -2,80 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:mini_golf/widgets/app_lotties_animation.dart';
 import 'package:mini_golf/widgets/custom_button.dart';
 import '../../../../core/theme/app_colors.dart';
+import 'package:provider/provider.dart';
+import '../providers/game_provider.dart';
 
-class ScorecardScreen extends StatefulWidget {
-  final List<String> playerNames;
-  final List<int> scores;
-
-  const ScorecardScreen({
-    super.key,
-    required this.playerNames,
-    required this.scores,
-  });
-
-  @override
-  State<ScorecardScreen> createState() => _ScorecardScreenState();
-}
-
-class _ScorecardScreenState extends State<ScorecardScreen> {
-  late List<Map<String, dynamic>> players;
-  late List<String> winners;
-
-  @override
-  void initState() {
-    super.initState();
-
-    // Create player list
-    players = List.generate(widget.playerNames.length, (i) {
-      return {'name': widget.playerNames[i], 'score': widget.scores[i]};
-    });
-
-    // ✅ Use MINIMUM score instead of maximum
-    int minScore = players
-        .map((p) => p['score'] as int)
-        .reduce((a, b) => a < b ? a : b);
-
-    // ✅ Find winners based on minimum score
-    winners =
-        players
-            .where((p) => p['score'] == minScore)
-            .map((p) => p['name'] as String)
-            .toList();
-
-    // If it's a tie
-    if (winners.length > 1) {
-      winners = ['Withdraw'];
-    }
-
-    // Show winner animation (if not a tie)
-    if (winners.first != 'Withdraw') {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        showDialog(
-          context: context,
-          barrierDismissible: true,
-          builder:
-              (context) => Dialog(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                child: AppLottieAnimation(
-                  assetPath: 'assets/lottie/trophy.json',
-                  height: 100,
-                  width: 200,
-                  fit: BoxFit.fitWidth,
-                ),
-              ),
-        );
-
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) Navigator.of(context, rootNavigator: true).pop();
-        });
-      });
-    }
-  }
+class ScorecardScreen extends StatelessWidget {
+  const ScorecardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    String winnerNames = winners.join(' & ');
+    final gameProvider = Provider.of<GameProvider>(context);
+    final game = gameProvider.currentGame;
+    final leaderboard = game?.getLeaderboard() ?? [];
+    final winners = game?.getWinners() ?? [];
+
+    String winnerNames = winners.map((p) => p.name).join(' & ');
 
     return Scaffold(
       backgroundColor: const Color(0xFF1E1E28),
@@ -114,14 +54,14 @@ class _ScorecardScreenState extends State<ScorecardScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              ...players.map(
+              ...leaderboard.map(
                 (player) => Padding(
                   padding: const EdgeInsets.only(bottom: 18.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        player['name'],
+                        player.name,
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
@@ -130,7 +70,7 @@ class _ScorecardScreenState extends State<ScorecardScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Total: ${player['score']}',
+                        'Total: ${gameProvider.currentGame?.totalScores[player.id] ?? 0}',
                         style: const TextStyle(
                           color: Color(0xFFB3B3B3),
                           fontSize: 14,
@@ -142,8 +82,8 @@ class _ScorecardScreenState extends State<ScorecardScreen> {
               ),
               const SizedBox(height: 18),
 
-              // ✅ Winner/Tie Section
-              if (winners.isNotEmpty && winners.first != 'Withdraw') ...[
+              // Winner/Tie Section
+              if (winners.isNotEmpty) ...[
                 Container(
                   width: double.infinity,
                   margin: const EdgeInsets.symmetric(vertical: 8),
@@ -162,12 +102,7 @@ class _ScorecardScreenState extends State<ScorecardScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          AppLottieAnimation(
-                            assetPath: 'assets/lottie/basic-trophy.json',
-                            height: 50,
-                            width: 80,
-                            fit: BoxFit.fitWidth,
-                          ),
+                          // You can add your trophy animation here
                           const Text(
                             ' Winner!',
                             style: TextStyle(
@@ -219,27 +154,6 @@ class _ScorecardScreenState extends State<ScorecardScreen> {
                         ),
                       ),
                     ],
-                  ),
-                ),
-              ] else ...[
-                Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.symmetric(vertical: 8),
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 24,
-                    horizontal: 16,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: AppColors.primary, width: 2),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      "Game tied! Thank you for playing.",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
                   ),
                 ),
               ],
