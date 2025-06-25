@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:mini_golf/features/game/presentation/pages/hole_score_screen.dart';
 import 'package:mini_golf/widgets/custom_button.dart';
 import 'package:provider/provider.dart';
-import 'package:mini_golf/features/game/domain/entities/player.dart' as domain;
 
 import '../../../../core/theme/app_colors.dart';
-import '../../data/models/player_model.dart';
 import '../pages/spin_wheel_screen.dart';
 import '../providers/game_provider.dart';
+import '../providers/player_provider.dart';
 import '../widgets/golf_dimple_painter.dart';
 import '../widgets/player_count_selector.dart';
 
@@ -27,12 +26,10 @@ class AddPlayersScreen extends StatefulWidget {
 
 class _AddPlayersScreenState extends State<AddPlayersScreen>
     with TickerProviderStateMixin {
-  int selectedPlayerCount = 2; // Default to 2 players
   final List<TextEditingController> _nameControllers = List.generate(
     6,
     (index) => TextEditingController(),
   );
-  final List<Color?> selectedColors = List.filled(6, null);
   bool _isCreatingGame = false;
 
   // Animation controllers for each color button
@@ -40,24 +37,20 @@ class _AddPlayersScreenState extends State<AddPlayersScreen>
   late List<Animation<double>> _scaleAnimations;
   late List<Animation<double>> _rotationAnimations;
 
-  final List<Color> availableColors = [
-    const Color(0xFFFF4444), // Red
-    const Color(0xFF44FF44), // Green
-    const Color(0xFF4444FF), // Blue
-    const Color(0xFFFFDD44), // Yellow
-    const Color(0xFFFF44DD), // Pink
-    const Color(0xFF44FFDD), // Cyan
-  ];
-
   @override
   void initState() {
     super.initState();
     _initializeAnimations();
+    _initializeTextControllers();
   }
 
   void _initializeAnimations() {
+    final playerProvider = Provider.of<PlayerSetupProvider>(
+      context,
+      listen: false,
+    );
     _colorAnimationControllers = List.generate(
-      availableColors.length,
+      playerProvider.availableColors.length,
       (index) => AnimationController(
         duration: const Duration(milliseconds: 200),
         vsync: this,
@@ -83,6 +76,19 @@ class _AddPlayersScreenState extends State<AddPlayersScreen>
             .toList();
   }
 
+  void _initializeTextControllers() {
+    final playerProvider = Provider.of<PlayerSetupProvider>(
+      context,
+      listen: false,
+    );
+    for (int i = 0; i < _nameControllers.length; i++) {
+      _nameControllers[i].text = playerProvider.playerNames[i];
+      _nameControllers[i].addListener(() {
+        playerProvider.setPlayerName(i, _nameControllers[i].text);
+      });
+    }
+  }
+
   @override
   void dispose() {
     for (var controller in _nameControllers) {
@@ -95,8 +101,13 @@ class _AddPlayersScreenState extends State<AddPlayersScreen>
   }
 
   void _onColorSelected(int playerIndex, Color color) async {
+    final playerProvider = Provider.of<PlayerSetupProvider>(
+      context,
+      listen: false,
+    );
+
     // Find the color index for animation
-    final colorIndex = availableColors.indexOf(color);
+    final colorIndex = playerProvider.availableColors.indexOf(color);
     if (colorIndex != -1) {
       // Reset the animation controller
       _colorAnimationControllers[colorIndex].reset();
@@ -105,123 +116,80 @@ class _AddPlayersScreenState extends State<AddPlayersScreen>
       await _colorAnimationControllers[colorIndex].reverse();
     }
 
-    if (!_isColorUnique(color, playerIndex)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('This color is already selected by another player'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    setState(() {
-      selectedColors[playerIndex] = color;
-    });
-  }
-
-  bool _isNameValid(String name) {
-    return name.trim().isNotEmpty;
-  }
-
-  bool _isNameUnique(String name, int currentIndex) {
-    for (int i = 0; i < selectedPlayerCount; i++) {
-      if (i != currentIndex &&
-          _nameControllers[i].text.trim().toLowerCase() ==
-              name.trim().toLowerCase()) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  String? _validatePlayerName(String name, int index) {
-    if (!_isNameValid(name)) {
-      return 'Name cannot be empty';
-    }
-    if (!_isNameUnique(name, index)) {
-      return 'Name must be unique';
-    }
-    return null;
-  }
-
-  bool _isColorUnique(Color color, int currentIndex) {
-    for (int i = 0; i < selectedPlayerCount; i++) {
-      if (i != currentIndex && selectedColors[i] == color) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  List<Player> _getValidPlayers() {
-    final validPlayers = <Player>[];
-
-    for (int i = 0; i < selectedPlayerCount; i++) {
-      final name = _nameControllers[i].text.trim();
-      final color = selectedColors[i];
-
-      if (_isNameValid(name) &&
-          _isNameUnique(name, i) &&
-          color != null &&
-          _isColorUnique(color, i)) {
-        validPlayers.add(
-          Player(
-            name: name,
-            avatar: 'assets/images/mini-golf.jpg',
-            handicap: 0,
-            colorHex: '#${color.value.toRadixString(16).substring(2)}',
+    if (!playerProvider.isColorUnique(color, playerIndex)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This color is already selected by another player'),
+            backgroundColor: Colors.red,
           ),
         );
       }
+      return;
     }
 
-    return validPlayers;
-  }
-
-  bool _canStartGame() {
-    final validPlayers = _getValidPlayers();
-    return validPlayers.length >= 2;
+    playerProvider.setPlayerColor(playerIndex, color);
   }
 
   Future<void> _startGame() async {
-    if (!_canStartGame() || _isCreatingGame) return;
+    final playerProvider = Provider.of<PlayerSetupProvider>(
+      context,
+      listen: false,
+    );
+    final gameProvider = Provider.of<GameProvider>(context, listen: false);
+
+    if (!playerProvider.canStartGame() || _isCreatingGame) return;
 
     setState(() {
       _isCreatingGame = true;
     });
 
     try {
-      final validPlayers = _getValidPlayers();
-      final domainPlayers = validPlayers.map(playerModelToDomain).toList();
-      final gameProvider = Provider.of<GameProvider>(context, listen: false);
+      final validPlayerNames = playerProvider.getValidPlayerNames();
+      final validPlayerColors = playerProvider.getValidPlayerColors();
 
       await gameProvider.createGame(
         courseName: widget.courseName,
-        players: domainPlayers,
+        numberOfHoles: widget.numberOfHoles,
+        playerNames: validPlayerNames,
+        playerColors: validPlayerColors,
       );
 
-      // After game is created, navigate based on course
-      if (widget.courseName == 'Blastzone Mini Golf') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => HoleScoreScreen()),
-        );
-      } else if (widget.courseName == 'Crazy Mini Golf') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => SpinWheelScreen(
-              onTaskSelected: (title, description) {
-                // After spinning, go to HoleScoreScreen
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => HoleScoreScreen()),
-                );
-              },
+      if (mounted) {
+        // Check for any errors from game creation
+        if (gameProvider.error != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to create game: ${gameProvider.error}'),
+              backgroundColor: Colors.red,
             ),
-          ),
-        );
+          );
+          return;
+        }
+
+        // After game is created, navigate based on course
+        if (widget.courseName == 'Blastzone Mini Golf') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => HoleScoreScreen()),
+          );
+        } else if (widget.courseName == 'Crazy Mini Golf') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (_) => SpinWheelScreen(
+                    onTaskSelected: (title, description) {
+                      // After spinning, go to HoleScoreScreen
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => HoleScoreScreen()),
+                      );
+                    },
+                  ),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -317,18 +285,23 @@ class _AddPlayersScreenState extends State<AddPlayersScreen>
   }
 
   void _showBallPicker(int playerIndex) async {
+    final playerProvider = Provider.of<PlayerSetupProvider>(
+      context,
+      listen: false,
+    );
+
     final AnimationController slideController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
     final Animation<Offset> slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 1), // Start from below the screen
-      end: Offset.zero, // Slide to its original position
+      begin: const Offset(0, 1),
+      end: Offset.zero,
     ).animate(
       CurvedAnimation(parent: slideController, curve: Curves.easeInOut),
     );
 
-    await slideController.forward(); // Start the slide animation
+    await slideController.forward();
 
     final Color? selected = await showModalBottomSheet<Color>(
       context: context,
@@ -353,19 +326,28 @@ class _AddPlayersScreenState extends State<AddPlayersScreen>
                   ),
                 ),
                 const SizedBox(height: 24),
-                Wrap(
-                  spacing: 24,
-                  runSpacing: 24,
-                  children: List.generate(availableColors.length, (colorIdx) {
-                    final color = availableColors[colorIdx];
-                    final isSelected = selectedColors[playerIndex] == color;
-                    return GestureDetector(
-                      onTap: () {
-                        Navigator.pop(context, color);
-                      },
-                      child: _buildGolfBall(color, isSelected, colorIdx),
+                Consumer<PlayerSetupProvider>(
+                  builder: (context, provider, child) {
+                    return Wrap(
+                      spacing: 24,
+                      runSpacing: 24,
+                      children: List.generate(provider.availableColors.length, (
+                        colorIdx,
+                      ) {
+                        final color = provider.availableColors[colorIdx];
+                        final colorHex =
+                            '#${color.value.toRadixString(16).substring(2)}';
+                        final isSelected =
+                            provider.selectedColors[playerIndex] == colorHex;
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.pop(context, color);
+                          },
+                          child: _buildGolfBall(color, isSelected, colorIdx),
+                        );
+                      }),
                     );
-                  }),
+                  },
                 ),
                 const SizedBox(height: 24),
               ],
@@ -380,6 +362,42 @@ class _AddPlayersScreenState extends State<AddPlayersScreen>
 
     if (selected != null) {
       _onColorSelected(playerIndex, selected);
+    }
+  }
+
+  Color _getPlayerColor(PlayerSetupProvider provider, int playerIndex) {
+    final colorHex = provider.selectedColors[playerIndex];
+    if (colorHex != null) {
+      return Color(int.parse(colorHex.replaceFirst('#', '0xFF')));
+    }
+    return Colors.white;
+  }
+
+  bool _isPlayerColorSelected(PlayerSetupProvider provider, int playerIndex) {
+    return provider.selectedColors[playerIndex] != null;
+  }
+
+  int _getColorIndex(PlayerSetupProvider provider, int playerIndex) {
+    final colorHex = provider.selectedColors[playerIndex];
+    if (colorHex != null) {
+      final color = Color(int.parse(colorHex.replaceFirst('#', '0xFF')));
+      return provider.availableColors.indexOf(color);
+    }
+    return 0;
+  }
+
+  String _getValidationMessage(PlayerSetupProvider provider) {
+    final validNames = provider.getValidPlayerNames();
+    final validColors = provider.getValidPlayerColors();
+
+    if (validNames.isEmpty) {
+      return 'Add at least two players to start';
+    } else if (validNames.length < 2) {
+      return 'Need ${2 - validNames.length} more valid player(s)';
+    } else if (validNames.length != validColors.length) {
+      return 'Please select colors for all players';
+    } else {
+      return '${validNames.length} player(s) ready';
     }
   }
 
@@ -400,285 +418,120 @@ class _AddPlayersScreenState extends State<AddPlayersScreen>
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'How many players?',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Player count selection
-              PlayerCountSelector(
-                selectedPlayerCount: selectedPlayerCount,
-                onPlayerCountChanged: (count) {
-                  setState(() {
-                    selectedPlayerCount = count;
-                    // Reset names/colors for unused players
-                    for (int i = count; i < 6; i++) {
-                      _nameControllers[i].clear();
-                      selectedColors[i] = null;
-                    }
-                  });
-                },
-              ),
-
-              const SizedBox(height: 24),
-              SizedBox(
-                height: MediaQuery.of(context).size.height * 0.4,
-                child: ListView.builder(
-                  itemCount: selectedPlayerCount,
-                  itemBuilder: (context, index) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 20),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _nameControllers[index],
-                              style: const TextStyle(color: Colors.white),
-                              decoration: InputDecoration(
-                                hintText: 'Player ${index + 1} Name',
-                                errorText: _validatePlayerName(
-                                  _nameControllers[index].text,
-                                  index,
-                                ),
-                              ),
-                              textCapitalization: TextCapitalization.sentences,
-                              onChanged: (value) {
-                                setState(() {});
-                              },
-                              onTapOutside: (_) {
-                                FocusScope.of(context).unfocus();
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          GestureDetector(
-                            onTap: () => _showBallPicker(index),
-                            child: _buildGolfBall(
-                              selectedColors[index] ?? Colors.white,
-                              false,
-                              selectedColors[index] != null
-                                  ? availableColors.indexOf(
-                                    selectedColors[index]!,
-                                  )
-                                  : 0,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 34),
-              Column(
-                mainAxisSize: MainAxisSize.min,
+          child: Consumer<PlayerSetupProvider>(
+            builder: (context, playerProvider, child) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CustomButton(
-                    onPressed:
-                        _canStartGame() && !_isCreatingGame ? _startGame : null,
-                    text: _isCreatingGame ? 'Creating Game...' : 'Start Game',
-                    backgroundColor:
-                        _canStartGame() ? AppColors.primary : AppColors.greyB3,
-                  ),
-                  const SizedBox(height: 8),
-                  Center(
-                    child: Text(
-                      _getValidPlayers().isEmpty
-                          ? 'Add at least two players to start'
-                          : _getValidPlayers().length < 2
-                          ? 'Need ${2 - _getValidPlayers().length} more valid player(s)'
-                          : '${_getValidPlayers().length} player(s) ready',
-                      style: const TextStyle(
-                        color: AppColors.greyB3,
-                        fontSize: 12,
-                      ),
+                  const Text(
+                    'How many players?',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  // Player count selection
+                  PlayerCountSelector(
+                    selectedPlayerCount: playerProvider.selectedPlayerCount,
+                    onPlayerCountChanged: (count) {
+                      playerProvider.setPlayerCount(count);
+                      // Clear text controllers for unused players
+                      for (int i = count; i < 6; i++) {
+                        _nameControllers[i].clear();
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.4,
+                    child: ListView.builder(
+                      itemCount: playerProvider.selectedPlayerCount,
+                      itemBuilder: (context, index) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 20),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _nameControllers[index],
+                                  style: const TextStyle(color: Colors.white),
+                                  decoration: InputDecoration(
+                                    hintText: 'Player ${index + 1} Name',
+                                    errorText: playerProvider
+                                        .validatePlayerName(
+                                          _nameControllers[index].text,
+                                          index,
+                                        ),
+                                  ),
+                                  textCapitalization:
+                                      TextCapitalization.sentences,
+                                  onTapOutside: (_) {
+                                    FocusScope.of(context).unfocus();
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              GestureDetector(
+                                onTap: () => _showBallPicker(index),
+                                child: _buildGolfBall(
+                                  _getPlayerColor(playerProvider, index),
+                                  _isPlayerColorSelected(playerProvider, index),
+                                  _getColorIndex(playerProvider, index),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 34),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Consumer<GameProvider>(
+                        builder: (context, gameProvider, child) {
+                          return CustomButton(
+                            onPressed:
+                                playerProvider.canStartGame() &&
+                                        !_isCreatingGame &&
+                                        !gameProvider.isLoading
+                                    ? _startGame
+                                    : null,
+                            text:
+                                _isCreatingGame || gameProvider.isLoading
+                                    ? 'Creating Game...'
+                                    : 'Start Game',
+                            backgroundColor:
+                                playerProvider.canStartGame() &&
+                                        !_isCreatingGame &&
+                                        !gameProvider.isLoading
+                                    ? AppColors.primary
+                                    : AppColors.greyB3,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      Center(
+                        child: Text(
+                          _getValidationMessage(playerProvider),
+                          style: const TextStyle(
+                            color: AppColors.greyB3,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
-              ),
-            ],
+              );
+            },
           ),
         ),
       ),
     );
   }
-
-  domain.Player playerModelToDomain(Player model) {
-    return domain.Player(
-      id: '', // You can generate or assign an ID if needed
-      name: model.name,
-      avatar: model.avatar,
-      handicap: model.handicap,
-      colorHex: model.colorHex,
-      createdAt: DateTime.now(),
-      // Add other fields if needed
-    );
-  }
 }
-
-// class AddPlayersScreen extends StatelessWidget {
-//   const AddPlayersScreen({super.key});
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       backgroundColor: AppColors.backgroundDark,
-//       appBar: AppBar(
-//         backgroundColor: AppColors.backgroundDark,
-//         elevation: 0,
-//         leading: const CloseButton(color: Colors.white),
-//         centerTitle: true,
-//         title: const Text(
-//           'New Game',
-//           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-//         ),
-//       ),
-//       body: const Padding(padding: EdgeInsets.all(16), child: AddPlayersBody()),
-//     );
-//   }
-// }
-//
-// class AddPlayersBody extends StatefulWidget {
-//   const AddPlayersBody({super.key});
-//
-//   @override
-//   State<AddPlayersBody> createState() => _AddPlayersBodyState();
-// }
-//
-// class _AddPlayersBodyState extends State<AddPlayersBody> {
-//   final List<String> playerNames = List.filled(6, '');
-//   final List<Color?> selectedColors = List.filled(6, null);
-//
-//   final List<Color> availableColors = [
-//     Colors.red,
-//     Colors.green,
-//     Colors.blue,
-//     Colors.yellow,
-//     Colors.pinkAccent,
-//     Colors.cyanAccent,
-//   ];
-//
-//   void _onColorSelected(int playerIndex, Color color) {
-//     setState(() {
-//       selectedColors[playerIndex] = color;
-//     });
-//   }
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return Column(
-//       children: [
-//         const Align(
-//           alignment: Alignment.centerLeft,
-//           child: Text(
-//             'Add Players',
-//             style: TextStyle(
-//               fontSize: 22,
-//               fontWeight: FontWeight.bold,
-//               color: AppColors.textPrimary,
-//             ),
-//           ),
-//         ),
-//         const SizedBox(height: 16),
-//         Expanded(
-//           child: ListView.builder(
-//             itemCount: 6,
-//             itemBuilder: (context, index) {
-//               return PlayerInputCard(
-//                 index: index,
-//                 onNameChanged: (name) => playerNames[index] = name,
-//                 selectedColor: selectedColors[index],
-//                 availableColors: availableColors,
-//                 onColorSelected: (color) => _onColorSelected(index, color),
-//               );
-//             },
-//           ),
-//         ),
-//         const SizedBox(height: 16),
-//         CustomButton(
-//           onPressed: () {
-//             Navigator.push(
-//               context,
-//               MaterialPageRoute(
-//                 builder:
-//                     (_) => HoleScoreScreen(
-//                       holeNumber: 1, // Replace with the desired hole number
-//                       players:
-//                           playerNames
-//                               .map(
-//                                 (name) => Player(
-//                                   name: name,
-//                                   avatar: 'assets/images/mini-golf.jpg',
-//                                   handicap: 2,
-//                                   colorHex: '',
-//                                 ),
-//                               )
-//                               .toList(),
-//                     ),
-//               ),
-//             );
-//           },
-//           text: 'Next',
-//         ),
-//       ],
-//     );
-//   }
-// }
-
-/*
- Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: List.generate(6, (index) {
-                  final count = index + 1;
-                  final isSelected = selectedPlayerCount == count;
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        selectedPlayerCount = count;
-                        // Reset names/colors for unused players
-                        for (int i = count; i < 6; i++) {
-                          _nameControllers[i].clear();
-                          selectedColors[i] = null;
-                        }
-                      });
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 100,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 12,
-                        horizontal: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color:
-                            isSelected ? AppColors.primary : Colors.transparent,
-                        border: Border.all(
-                          color:
-                              isSelected ? AppColors.primary : AppColors.greyB3,
-                          width: 1,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        '$count Player${count > 1 ? 's' : ''}',
-                        style: TextStyle(
-                          color: isSelected ? Colors.black : Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: isSelected ? 14 : 12,
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-              ),
- */
