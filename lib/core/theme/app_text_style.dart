@@ -112,7 +112,7 @@ class AppTextStyles {
   );
 
   static TextStyle label = TextStyle(
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: FontWeight.w700,
     color: AppColors.textSecondary,
     height: 1.4,
@@ -125,7 +125,7 @@ class AppTextStyles {
   );
 
   static const TextStyle error = TextStyle(
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: FontWeight.normal,
     color: AppColors.error,
     height: 1.5,

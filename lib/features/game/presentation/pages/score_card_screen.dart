@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mini_golf/widgets/app_lotties_animation.dart';
 import 'package:mini_golf/widgets/custom_button.dart';
-
 import '../../../../core/theme/app_colors.dart';
 
 class ScorecardScreen extends StatefulWidget {
@@ -26,29 +25,29 @@ class _ScorecardScreenState extends State<ScorecardScreen> {
   void initState() {
     super.initState();
 
-    // Build players list from names and scores
+    // Create player list
     players = List.generate(widget.playerNames.length, (i) {
       return {'name': widget.playerNames[i], 'score': widget.scores[i]};
     });
 
-    // Find max score
-    int maxScore = players
+    // ✅ Use MINIMUM score instead of maximum
+    int minScore = players
         .map((p) => p['score'] as int)
-        .reduce((a, b) => a > b ? a : b);
+        .reduce((a, b) => a < b ? a : b);
 
-    // Identify winners
+    // ✅ Find winners based on minimum score
     winners =
         players
-            .where((p) => p['score'] == maxScore)
+            .where((p) => p['score'] == minScore)
             .map((p) => p['name'] as String)
             .toList();
 
-    // If more than one winner, it's a tie
+    // If it's a tie
     if (winners.length > 1) {
       winners = ['Withdraw'];
     }
 
-    // 🎉 Show celebration only if NOT a tie
+    // Show winner animation (if not a tie)
     if (winners.first != 'Withdraw') {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         showDialog(
@@ -67,7 +66,6 @@ class _ScorecardScreenState extends State<ScorecardScreen> {
               ),
         );
 
-        // Optionally auto-close the dialog
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) Navigator.of(context, rootNavigator: true).pop();
         });
@@ -143,10 +141,9 @@ class _ScorecardScreenState extends State<ScorecardScreen> {
                 ),
               ),
               const SizedBox(height: 18),
-              // Winner Celebration Section
-              // Conditional Winner or Tie Message
+
+              // ✅ Winner/Tie Section
               if (winners.isNotEmpty && winners.first != 'Withdraw') ...[
-                // Winner Celebration Section
                 Container(
                   width: double.infinity,
                   margin: const EdgeInsets.symmetric(vertical: 8),
@@ -225,7 +222,6 @@ class _ScorecardScreenState extends State<ScorecardScreen> {
                   ),
                 ),
               ] else ...[
-                // Game Tied Message
                 Container(
                   width: double.infinity,
                   margin: const EdgeInsets.symmetric(vertical: 8),
@@ -247,7 +243,6 @@ class _ScorecardScreenState extends State<ScorecardScreen> {
                   ),
                 ),
               ],
-
               const SizedBox(height: 24),
               CustomButton(
                 text: 'New Game',

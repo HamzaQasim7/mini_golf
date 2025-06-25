@@ -7,6 +7,7 @@ import 'package:mini_golf/widgets/shared_dynamic_icon.dart';
 import 'package:provider/provider.dart';
 
 import '../../../game/presentation/pages/course_selection_screen.dart';
+import 'package:mini_golf/features/game/presentation/pages/history_screen.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -74,36 +75,18 @@ class HomePage extends StatelessWidget {
                 },
                 width: 300,
               ),
-              const Gap(16),
-              // CustomButton(
-              //   text: 'View History',
-              //   onPressed: () async {
-              //     final gameProvider = Provider.of<GameProvider>(context, listen: false);
-              //     try {
-              //       final games = await gameProvider.getAllGames();
-              //       if (mounted) {
-              //         // Navigate to history screen (you'll need to create this)
-              //         // Navigator.push(
-              //         //   context,
-              //         //   MaterialPageRoute(builder: (_) => GameHistoryScreen(games: games)),
-              //         // );
-              //       }
-              //     } catch (e) {
-              //       if (mounted) {
-              //         ScaffoldMessenger.of(context).showSnackBar(
-              //           SnackBar(
-              //             content: Text('Failed to load game history: $e'),
-              //             backgroundColor: Colors.red,
-              //           ),
-              //         );
-              //       }
-              //     }
-              //   },
-              //   width: 300,
-              // ),
             ],
           ),
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const GameHistoryScreen()),
+          );
+        },
+        child: Icon(Icons.history, color: Colors.white),
       ),
     );
   }

@@ -152,8 +152,8 @@ class AppTheme {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: AppColors.surfaceDark,
-      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      fillColor: const Color(0xFF23322B),
+      contentPadding: const EdgeInsets.symmetric(vertical: 3, horizontal: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: AppColors.border),

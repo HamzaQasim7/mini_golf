@@ -19,6 +19,7 @@ import '../../data/models/player_model.dart';
 import '../providers/game_provider.dart';
 import '../widgets/golf_dimple_painter.dart';
 import '../pages/game_flow_screen.dart';
+import '../widgets/player_count_selector.dart';
 
 class AddPlayersScreen extends StatefulWidget {
   final String courseName;
@@ -207,11 +208,12 @@ class _AddPlayersScreenState extends State<AddPlayersScreen>
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => GameFlowScreen(
-            courseName: widget.courseName,
-            numberOfHoles: widget.numberOfHoles,
-            playerNames: playerNames,
-          ),
+          builder:
+              (_) => GameFlowScreen(
+                courseName: widget.courseName,
+                numberOfHoles: widget.numberOfHoles,
+                playerNames: playerNames,
+              ),
         ),
       );
     } catch (e) {
@@ -366,8 +368,8 @@ class _AddPlayersScreenState extends State<AddPlayersScreen>
       },
     );
 
-    slideController.reverse(); // Reverse the animation after modal is dismissed
-    slideController.dispose(); // Dispose the controller after use
+    slideController.reverse();
+    slideController.dispose();
 
     if (selected != null) {
       _onColorSelected(playerIndex, selected);
@@ -404,55 +406,21 @@ class _AddPlayersScreenState extends State<AddPlayersScreen>
               ),
               const SizedBox(height: 16),
               // Player count selection
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: List.generate(6, (index) {
-                  final count = index + 1;
-                  final isSelected = selectedPlayerCount == count;
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        selectedPlayerCount = count;
-                        // Reset names/colors for unused players
-                        for (int i = count; i < 6; i++) {
-                          _nameControllers[i].clear();
-                          selectedColors[i] = null;
-                        }
-                      });
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 100,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 12,
-                        horizontal: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color:
-                            isSelected ? AppColors.primary : Colors.transparent,
-                        border: Border.all(
-                          color:
-                              isSelected ? AppColors.primary : AppColors.greyB3,
-                          width: 1,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        '$count Player${count > 1 ? 's' : ''}',
-                        style: TextStyle(
-                          color: isSelected ? Colors.black : Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: isSelected ? 14 : 12,
-                        ),
-                      ),
-                    ),
-                  );
-                }),
+              PlayerCountSelector(
+                selectedPlayerCount: selectedPlayerCount,
+                onPlayerCountChanged: (count) {
+                  setState(() {
+                    selectedPlayerCount = count;
+                    // Reset names/colors for unused players
+                    for (int i = count; i < 6; i++) {
+                      _nameControllers[i].clear();
+                      selectedColors[i] = null;
+                    }
+                  });
+                },
               ),
+
               const SizedBox(height: 24),
-              // Player name and color pickers
               SizedBox(
                 height: MediaQuery.of(context).size.height * 0.4,
                 child: ListView.builder(
@@ -463,38 +431,20 @@ class _AddPlayersScreenState extends State<AddPlayersScreen>
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          // Expanded name field
                           Expanded(
                             child: TextField(
                               controller: _nameControllers[index],
                               style: const TextStyle(color: Colors.white),
                               decoration: InputDecoration(
                                 hintText: 'Player ${index + 1} Name',
-                                hintStyle: const TextStyle(
-                                  color: AppColors.greyB3,
-                                ),
-                                filled: true,
-                                fillColor: const Color(0xFF23322B),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none,
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                ),
                                 errorText: _validatePlayerName(
                                   _nameControllers[index].text,
                                   index,
                                 ),
-                                errorStyle: const TextStyle(
-                                  color: Colors.red,
-                                  fontSize: 12,
-                                ),
                               ),
+                              textCapitalization: TextCapitalization.sentences,
                               onChanged: (value) {
-                                setState(() {
-                                  // Trigger validation on change
-                                });
+                                setState(() {});
                               },
                               onTapOutside: (_) {
                                 FocusScope.of(context).unfocus();
@@ -502,12 +452,10 @@ class _AddPlayersScreenState extends State<AddPlayersScreen>
                             ),
                           ),
                           const SizedBox(width: 16),
-                          // Tappable golf ball
                           GestureDetector(
                             onTap: () => _showBallPicker(index),
                             child: _buildGolfBall(
-                              selectedColors[index] ??
-                                  Colors.white, // Default to white
+                              selectedColors[index] ?? Colors.white,
                               false,
                               selectedColors[index] != null
                                   ? availableColors.indexOf(
@@ -523,7 +471,6 @@ class _AddPlayersScreenState extends State<AddPlayersScreen>
                 ),
               ),
               const SizedBox(height: 34),
-              // Bottom section with button and status text
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -666,3 +613,54 @@ class _AddPlayersScreenState extends State<AddPlayersScreen>
 //     );
 //   }
 // }
+
+
+/*
+ Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: List.generate(6, (index) {
+                  final count = index + 1;
+                  final isSelected = selectedPlayerCount == count;
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        selectedPlayerCount = count;
+                        // Reset names/colors for unused players
+                        for (int i = count; i < 6; i++) {
+                          _nameControllers[i].clear();
+                          selectedColors[i] = null;
+                        }
+                      });
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 100,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            isSelected ? AppColors.primary : Colors.transparent,
+                        border: Border.all(
+                          color:
+                              isSelected ? AppColors.primary : AppColors.greyB3,
+                          width: 1,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '$count Player${count > 1 ? 's' : ''}',
+                        style: TextStyle(
+                          color: isSelected ? Colors.black : Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: isSelected ? 14 : 12,
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+ */
