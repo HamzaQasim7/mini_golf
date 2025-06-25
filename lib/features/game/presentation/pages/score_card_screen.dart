@@ -11,11 +11,11 @@ class ScorecardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gameProvider = Provider.of<GameProvider>(context);
-    final game = gameProvider.currentGame;
-    final leaderboard = game?.getLeaderboard() ?? [];
-    final winners = game?.getWinners() ?? [];
+    final leaderboard = gameProvider.getLeaderboard();
+    final winners = gameProvider.getWinners();
 
     String winnerNames = winners.map((p) => p.name).join(' & ');
+    bool isTie = winners.length > 1;
 
     return Scaffold(
       backgroundColor: const Color(0xFF1E1E28),
@@ -45,17 +45,20 @@ class ScorecardScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 8),
-              const Text(
-                'Final Scores',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 22,
+              if (leaderboard.isNotEmpty)
+                const Text(
+                  'Final Scores',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                  ),
                 ),
-              ),
               const SizedBox(height: 20),
-              ...leaderboard.map(
-                (player) => Padding(
+              ...leaderboard.map((entry) {
+                final player = entry['player'] as dynamic;
+                final score = entry['totalScore'] as int;
+                return Padding(
                   padding: const EdgeInsets.only(bottom: 18.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -70,7 +73,7 @@ class ScorecardScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Total: ${gameProvider.currentGame?.totalScores[player.id] ?? 0}',
+                        'Total: $score',
                         style: const TextStyle(
                           color: Color(0xFFB3B3B3),
                           fontSize: 14,
@@ -78,8 +81,8 @@ class ScorecardScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                ),
-              ),
+                );
+              }),
               const SizedBox(height: 18),
 
               // Winner/Tie Section
@@ -99,13 +102,17 @@ class ScorecardScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
+                      AppLottieAnimation(
+                        assetPath: 'assets/lottie/trophy.json',
+                        height: 100,
+                      ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           // You can add your trophy animation here
-                          const Text(
-                            ' Winner!',
-                            style: TextStyle(
+                          Text(
+                            isTie ? 'It\'s a Tie!' : ' Winner!',
+                            style: const TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
                               color: Colors.amber,

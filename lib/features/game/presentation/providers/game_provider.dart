@@ -421,11 +421,26 @@ class GameProvider extends ChangeNotifier {
       leaderboard.add({
         'player': _currentGame!.players[i],
         'totalScore': totalScores[i],
-        'rank': 0, // Will be calculated
       });
     }
 
+    // Sort by score (ascending)
+    leaderboard.sort((a, b) => a['totalScore'].compareTo(b['totalScore']));
     return leaderboard;
+  }
+
+  // Helper method to get the winner(s)
+  List<Player> getWinners() {
+    if (_currentGame == null || !_currentGame!.isCompleted) return [];
+
+    final leaderboard = getLeaderboard();
+    if (leaderboard.isEmpty) return [];
+
+    final minScore = leaderboard.first['totalScore'];
+    return leaderboard
+        .where((entry) => entry['totalScore'] == minScore)
+        .map((entry) => entry['player'] as Player)
+        .toList();
   }
 }
 

@@ -167,26 +167,31 @@ class _AddPlayersScreenState extends State<AddPlayersScreen>
           return;
         }
 
-        // After game is created, navigate based on course
+        // After game is created, navigate to the first hole
+        final currentHole = gameProvider.currentGame?.currentHole ?? 1;
+
         if (widget.courseName == 'Blastzone Mini Golf') {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => HoleScoreScreen()),
+            MaterialPageRoute(
+              builder: (_) => HoleScoreScreen(holeNumber: currentHole),
+            ),
           );
         } else if (widget.courseName == 'Crazy Mini Golf') {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder:
-                  (_) => SpinWheelScreen(
-                    onTaskSelected: (title, description) {
-                      // After spinning, go to HoleScoreScreen
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => HoleScoreScreen()),
-                      );
-                    },
-                  ),
+              builder: (_) => SpinWheelScreen(
+                onTaskSelected: (title, description) {
+                  // After spinning, go to HoleScoreScreen for the first hole
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => HoleScoreScreen(holeNumber: currentHole),
+                    ),
+                  );
+                },
+              ),
             ),
           );
         }
