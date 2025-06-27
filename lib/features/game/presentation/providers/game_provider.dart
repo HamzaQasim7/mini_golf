@@ -62,7 +62,7 @@ class GameProvider extends ChangeNotifier {
         name: 'Blastzone Mini Golf',
         imageUrl: 'assets/images/mini-golf.jpg',
         holes: 18,
-        parValues: List.filled(18, 3), // All holes are par 3
+        parValues: [3, 2, 3, 2, 2, 2, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2], // Pars from scorecard
       ),
       Course(
         id: _uuid.v4(),
@@ -361,7 +361,9 @@ class GameProvider extends ChangeNotifier {
   }
 
   Player? getWinner() {
-    return _currentGame?.getWinner();
+    final winners = _currentGame?.getWinners();
+    if (winners == null || winners.length != 1) return null;
+    return winners.first;
   }
 
   bool canMoveToNextHole() {

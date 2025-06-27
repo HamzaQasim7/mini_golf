@@ -2,8 +2,6 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import '../database/hive_model.dart';
 
-part 'hive_model.g.dart';
-
 class HiveService {
   static const String _gameBoxName = 'games';
   static const String _playerBoxName = 'players';

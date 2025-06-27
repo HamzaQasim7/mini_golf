@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:mini_golf/features/game/presentation/pages/hole_score_screen.dart';
+import 'package:mini_golf/features/game/presentation/pages/all_holes_score_entry_screen.dart';
 import 'package:mini_golf/features/game/presentation/providers/game_provider.dart';
 import 'package:mini_golf/widgets/custom_button.dart';
 import 'package:provider/provider.dart';
@@ -70,8 +70,7 @@ class HomePage extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => HoleScoreScreen(
-                              holeNumber: gameProvider.currentGame!.currentHole,
+                            builder: (_) => AllHolesScoreEntryScreen(
                             ),
                           ),
                         );

@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:mini_golf/features/game/presentation/pages/hole_score_screen.dart';
 import 'package:mini_golf/widgets/custom_button.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../pages/spin_wheel_screen.dart';
 import '../providers/game_provider.dart';
 import '../providers/player_provider.dart';
 import '../widgets/golf_dimple_painter.dart';
 import '../widgets/player_count_selector.dart';
+import 'game_flow_screen.dart';
 
 class AddPlayersScreen extends StatefulWidget {
   final String courseName;
@@ -156,7 +155,6 @@ class _AddPlayersScreenState extends State<AddPlayersScreen>
       );
 
       if (mounted) {
-        // Check for any errors from game creation
         if (gameProvider.error != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -167,34 +165,13 @@ class _AddPlayersScreenState extends State<AddPlayersScreen>
           return;
         }
 
-        // After game is created, navigate to the first hole
-        final currentHole = gameProvider.currentGame?.currentHole ?? 1;
-
-        if (widget.courseName == 'Blastzone Mini Golf') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => HoleScoreScreen(holeNumber: currentHole),
-            ),
-          );
-        } else if (widget.courseName == 'Crazy Mini Golf') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => SpinWheelScreen(
-                onTaskSelected: (title, description) {
-                  // After spinning, go to HoleScoreScreen for the first hole
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => HoleScoreScreen(holeNumber: currentHole),
-                    ),
-                  );
-                },
-              ),
-            ),
-          );
-        }
+        // Navigate to the GameFlowScreen, which will handle the routing.
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const GameFlowScreen(),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {

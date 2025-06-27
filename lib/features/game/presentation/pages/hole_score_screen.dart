@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../widgets/score_button.dart';
 import 'package:provider/provider.dart';
 import '../providers/game_provider.dart';
+import 'all_holes_score_entry_screen.dart';
 
 class HoleScoreScreen extends StatefulWidget {
   final int holeNumber;
@@ -115,6 +116,20 @@ class _HoleScoreScreenState extends State<HoleScoreScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.grid_on, color: Colors.white),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AllHolesScoreEntryScreen(),
+                    ),
+                  );
+                },
+                tooltip: 'Full Scorecard',
+              ),
+            ],
           ),
           body: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

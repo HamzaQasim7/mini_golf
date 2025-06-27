@@ -1,18 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:mini_golf/widgets/app_lotties_animation.dart';
 import 'package:mini_golf/widgets/custom_button.dart';
+import '../../../../core/database/hive_model.dart';
 import '../../../../core/theme/app_colors.dart';
-import 'package:provider/provider.dart';
-import '../providers/game_provider.dart';
 
 class ScorecardScreen extends StatelessWidget {
-  const ScorecardScreen({super.key});
+  final Game game;
+
+  const ScorecardScreen({super.key, required this.game});
+
+  List<Map<String, dynamic>> _getLeaderboard(Game game) {
+    final totalScores = game.getTotalScores();
+    final leaderboard = <Map<String, dynamic>>[];
+
+    for (int i = 0; i < game.players.length; i++) {
+      leaderboard.add({
+        'player': game.players[i],
+        'totalScore': totalScores[i],
+      });
+    }
+    leaderboard.sort((a, b) => a['totalScore'].compareTo(b['totalScore']));
+    return leaderboard;
+  }
+
+  List<Player> _getWinners(List<Map<String, dynamic>> leaderboard) {
+    if (leaderboard.isEmpty) return [];
+
+    final minScore = leaderboard.first['totalScore'];
+    return leaderboard
+        .where((entry) => entry['totalScore'] == minScore)
+        .map((entry) => entry['player'] as Player)
+        .toList();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final gameProvider = Provider.of<GameProvider>(context);
-    final leaderboard = gameProvider.getLeaderboard();
-    final winners = gameProvider.getWinners();
+    final leaderboard = _getLeaderboard(game);
+    final winners = _getWinners(leaderboard);
 
     String winnerNames = winners.map((p) => p.name).join(' & ');
     bool isTie = winners.length > 1;
@@ -25,7 +49,7 @@ class ScorecardScreen extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.close, color: Colors.white),
           onPressed: () {
-            Navigator.pop(context);
+            Navigator.of(context).popUntil((route) => route.isFirst);
           },
         ),
         title: const Text(
@@ -91,12 +115,12 @@ class ScorecardScreen extends StatelessWidget {
                   width: double.infinity,
                   margin: const EdgeInsets.symmetric(vertical: 8),
                   padding: const EdgeInsets.symmetric(
-                    vertical: 24,
-                    horizontal: 16,
+                    vertical: 12,
+                    horizontal: 0,
                   ),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: AppColors.primary, width: 2),
                   ),
                   child: Column(
@@ -104,16 +128,16 @@ class ScorecardScreen extends StatelessWidget {
                     children: [
                       AppLottieAnimation(
                         assetPath: 'assets/lottie/trophy.json',
-                        height: 100,
+                        height: 70,
+                        fit: BoxFit.fitHeight,
                       ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // You can add your trophy animation here
                           Text(
                             isTie ? 'It\'s a Tie!' : ' Winner!',
                             style: const TextStyle(
-                              fontSize: 28,
+                              fontSize: 22,
                               fontWeight: FontWeight.bold,
                               color: Colors.amber,
                               shadows: [
@@ -127,7 +151,7 @@ class ScorecardScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 4),
                       Text(
                         winnerNames,
                         textAlign: TextAlign.center,
@@ -144,12 +168,12 @@ class ScorecardScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 4),
                       const Text(
                         'Congratulations!',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -157,7 +181,7 @@ class ScorecardScreen extends StatelessWidget {
                         'You are the mini golf champion!',
                         style: TextStyle(
                           color: Color(0xFFB3B3B3),
-                          fontSize: 14,
+                          fontSize: 12,
                         ),
                       ),
                     ],

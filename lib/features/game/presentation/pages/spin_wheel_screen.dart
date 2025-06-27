@@ -9,7 +9,7 @@ import 'package:mini_golf/widgets/custom_button.dart';
 import '../../../../core/theme/app_colors.dart';
 
 class SpinWheelScreen extends StatefulWidget {
-  final void Function(String title, String description) onTaskSelected;
+  final void Function(BuildContext context, String title, String description) onTaskSelected;
 
   const SpinWheelScreen({super.key, required this.onTaskSelected});
 
@@ -127,6 +127,7 @@ class _SpinWheelScreenState extends State<SpinWheelScreen> {
                 CustomButton(
                   onPressed: () {
                     widget.onTaskSelected(
+                      context,
                       crazyMiniGolfTasks[selectedIndex!].title,
                       crazyMiniGolfTasks[selectedIndex!].description,
                     );

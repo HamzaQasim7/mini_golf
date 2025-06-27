@@ -2,6 +2,8 @@
 import 'dart:ui';
 import 'package:hive/hive.dart';
 
+part 'hive_model.g.dart';
+
 @HiveType(typeId: 0)
 class Game extends HiveObject {
   @HiveField(0)
@@ -52,18 +54,16 @@ class Game extends HiveObject {
     }).toList();
   }
 
-  Player? getWinner() {
-    if (!isCompleted) return null;
-
+  List<Player> getWinners() {
+    if (!isCompleted) return [];
     final totalScores = getTotalScores();
     final minScore = totalScores.reduce((a, b) => a < b ? a : b);
-    final winnerIndex = totalScores.indexOf(minScore);
-
-    // Check for tie
-    final winners = totalScores.where((score) => score == minScore).length;
-    if (winners > 1) return null; // Tie game
-
-    return players[winnerIndex];
+    return players
+        .asMap()
+        .entries
+        .where((entry) => totalScores[entry.key] == minScore)
+        .map((entry) => entry.value)
+        .toList();
   }
 }
 
