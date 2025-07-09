@@ -2,6 +2,7 @@
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 class PlayerSetupProvider extends ChangeNotifier {
   int _selectedPlayerCount = 2;
@@ -11,12 +12,12 @@ class PlayerSetupProvider extends ChangeNotifier {
 
   // Available colors
   final List<Color> availableColors = [
-    const Color(0xFFFF4444), // Red
-    const Color(0xFF44FF44), // Green
-    const Color(0xFF4444FF), // Blue
-    const Color(0xFFFFDD44), // Yellow
-    const Color(0xFFFF44DD), // Pink
-    const Color(0xFF44FFDD), // Cyan
+    const Color(0xFF000000), // Black
+    const Color(0xFF2196F3), // Blue
+    const Color(0xFFFF4081), // Pink
+    const Color(0xFF9C27B0), // Purple
+    const Color(0xFF4CAF50), // Green
+    const Color(0xFFFFEB3B), // Yellow
   ];
 
   // Getters

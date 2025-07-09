@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mini_golf/features/game/presentation/pages/hole_by_hole_screen.dart';
 import 'package:mini_golf/features/game/presentation/pages/score_card_screen.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -176,13 +177,24 @@ class _GameHistoryCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
-          // Navigate to the ScorecardScreen with the specific game's data
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ScorecardScreen(game: game),
-            ),
-          );
+          if (game.isCompleted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ScorecardScreen(game: game),
+              ),
+            );
+          } else {
+            // Set as current game in provider before resuming
+            final gameProvider = Provider.of<GameProvider>(context, listen: false);
+            gameProvider.setCurrentGame(game);
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const HoleByHoleScreen(),
+              ),
+            );
+          }
         },
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),

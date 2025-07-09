@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:mini_golf/features/game/presentation/pages/all_holes_score_entry_screen.dart';
+import 'package:mini_golf/features/game/presentation/pages/hole_by_hole_screen.dart';
 import 'package:mini_golf/features/game/presentation/providers/game_provider.dart';
 import 'package:mini_golf/widgets/custom_button.dart';
 import 'package:provider/provider.dart';
@@ -57,10 +58,9 @@ class HomePage extends StatelessWidget {
                   const Gap(16),
                   Text(
                     'Welcome to Blast Zone',
-                    style:
-                        Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const Gap(16),
                   if (gameProvider.hasActiveGame) ...[
@@ -69,10 +69,7 @@ class HomePage extends StatelessWidget {
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (_) => AllHolesScoreEntryScreen(
-                            ),
-                          ),
+                          MaterialPageRoute(builder: (_) => HoleByHoleScreen()),
                         );
                       },
                       width: 300,
@@ -80,9 +77,10 @@ class HomePage extends StatelessWidget {
                     const Gap(8),
                   ],
                   CustomButton(
-                    text: gameProvider.hasActiveGame
-                        ? 'Start New Game'
-                        : 'Play Now',
+                    text:
+                        gameProvider.hasActiveGame
+                            ? 'Start New Game'
+                            : 'Play Now',
                     onPressed: () {
                       Navigator.push(
                         context,

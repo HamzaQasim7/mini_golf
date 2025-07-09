@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class Game {
   final String? id;
   final String courseName;
@@ -87,10 +85,9 @@ class Game {
       'numberOfHoles': numberOfHoles,
       'players': players.map((p) => p.toMap()).toList(),
       'isCompleted': isCompleted,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'lastUpdated': Timestamp.fromDate(lastUpdated),
-      'completedAt':
-          completedAt != null ? Timestamp.fromDate(completedAt!) : null,
+      'createdAt': createdAt.toIso8601String(),
+      'lastUpdated': lastUpdated.toIso8601String(),
+      'completedAt': completedAt?.toIso8601String(),
       'currentHole': currentHole,
     };
   }
@@ -106,10 +103,16 @@ class Game {
               .toList() ??
           [],
       isCompleted: map['isCompleted'] ?? false,
-      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      lastUpdated:
-          (map['lastUpdated'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      completedAt: (map['completedAt'] as Timestamp?)?.toDate(),
+      createdAt: DateTime.parse(
+        map['createdAt'] ?? DateTime.now().toIso8601String(),
+      ),
+      lastUpdated: DateTime.parse(
+        map['lastUpdated'] ?? DateTime.now().toIso8601String(),
+      ),
+      completedAt:
+          map['completedAt'] != null
+              ? DateTime.parse(map['completedAt'])
+              : null,
       currentHole: map['currentHole'] ?? 1,
     );
   }

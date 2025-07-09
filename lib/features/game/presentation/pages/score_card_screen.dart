@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mini_golf/features/game/presentation/pages/course_selection_screen.dart';
 import 'package:mini_golf/widgets/app_lotties_animation.dart';
 import 'package:mini_golf/widgets/custom_button.dart';
 import '../../../../core/database/hive_model.dart';
@@ -198,7 +199,12 @@ class ScorecardScreen extends StatelessWidget {
                   fontSize: 18,
                 ),
                 onPressed: () {
-                  Navigator.of(context).popUntil((route) => route.isFirst);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const CourseSelectionScreen(),
+                    ),
+                  );
                 },
               ),
               const SizedBox(height: 16),

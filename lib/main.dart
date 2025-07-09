@@ -8,7 +8,7 @@ import 'core/app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await HiveService.init(); // Initialize Hive for local storage
+  await HiveService.init();
 
   runApp(
     MultiProvider(

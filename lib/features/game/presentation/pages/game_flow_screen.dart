@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/game_provider.dart';
-import 'all_holes_score_entry_screen.dart';
+import 'hole_by_hole_screen.dart';
 import 'spin_wheel_screen.dart';
 
 class GameFlowScreen extends StatelessWidget {
@@ -20,26 +20,26 @@ class GameFlowScreen extends StatelessWidget {
     if (courseName == 'Crazy Mini Golf') {
       return SpinWheelScreen(
         onTaskSelected: (spinContext, title, description) {
-          // After spinning the wheel, navigate to the full scorecard.
+          // After spinning the wheel, navigate to the hole-by-hole screen.
           Navigator.pushReplacement(
             spinContext,
             MaterialPageRoute(
-              builder: (_) => const AllHolesScoreEntryScreen(),
+              builder: (_) => const HoleByHoleScreen(),
             ),
           );
 
-          // Show a SnackBar with the task for confirmation
+          // Show a SnackBar with the task for the first hole
           ScaffoldMessenger.of(spinContext).showSnackBar(
             SnackBar(
-              content: Text('This Round\'s Task: $title'),
+              content: Text('Hole 1 Task: $title'),
               backgroundColor: Colors.blueAccent,
             ),
           );
         },
       );
     } else {
-      // For all other courses, go directly to the score entry screen.
-      return const AllHolesScoreEntryScreen();
+      // For all other courses, go directly to the hole-by-hole screen.
+      return const HoleByHoleScreen();
     }
   }
 }

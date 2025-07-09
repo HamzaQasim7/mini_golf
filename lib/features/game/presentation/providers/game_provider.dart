@@ -5,6 +5,14 @@ import 'package:uuid/uuid.dart';
 import '../../../../core/database/hive_model.dart';
 import '../../../../core/services/hive_service.dart';
 
+final List<int> blastzoneMiniGolfParValues = [
+  3, 2, 3, 2, 2, 2, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
+];
+
+final List<int> crazyMiniGolfParValues = [
+  3, 2, 3, 2, 2, 2, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
+];
+
 class GameProvider extends ChangeNotifier {
   Game? _currentGame;
   List<Game> _gameHistory = [];
@@ -69,7 +77,7 @@ class GameProvider extends ChangeNotifier {
         name: 'Crazy Mini Golf',
         imageUrl: 'assets/images/crazy_mini_golf.jpg',
         holes: 18,
-        parValues: List.filled(18, 3),
+        parValues:  [3, 2, 3, 2, 2, 2, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
       ),
     ];
 
@@ -100,6 +108,25 @@ class GameProvider extends ChangeNotifier {
         throw Exception('At least 2 players required');
       }
 
+      // Set par values based on course
+      List<int> parValues;
+      if (courseName == 'Blastzone Mini Golf') {
+        parValues = blastzoneMiniGolfParValues;
+      } else if (courseName == 'Crazy Mini Golf') {
+        parValues = crazyMiniGolfParValues;
+      } else {
+        parValues = List.filled(numberOfHoles, 3); // fallback
+      }
+
+      // Create course object
+      final course = Course(
+        id: _uuid.v4(),
+        name: courseName,
+        imageUrl: 'assets/images/crazy_mini_golf.jpg', // or appropriate image
+        holes: numberOfHoles,
+        parValues: parValues,
+      );
+
       // Create players using Hive models
       final players = List.generate(playerNames.length, (index) {
         return Player(
@@ -113,8 +140,9 @@ class GameProvider extends ChangeNotifier {
 
       // Initialize hole scores
       final holes = List.generate(numberOfHoles, (holeIndex) {
+        final par = parValues[holeIndex];
         return List.generate(players.length, (playerIndex) {
-          return HoleScore(strokes: 0, par: 3); // Default par 3
+          return HoleScore(strokes: 0, par: par);
         });
       });
 
@@ -190,11 +218,11 @@ class GameProvider extends ChangeNotifier {
 
       // Initialize hole scores
       final holes = List.generate(course.holes, (holeIndex) {
+        final par =
+            holeIndex < course.parValues.length
+                ? course.parValues[holeIndex]
+                : 3;
         return List.generate(players.length, (playerIndex) {
-          final par =
-              holeIndex < course.parValues.length
-                  ? course.parValues[holeIndex]
-                  : 3;
           return HoleScore(strokes: 0, par: par);
         });
       });
@@ -443,6 +471,24 @@ class GameProvider extends ChangeNotifier {
         .where((entry) => entry['totalScore'] == minScore)
         .map((entry) => entry['player'] as Player)
         .toList();
+  }
+
+  Future<void> updateCurrentHole(int holeNumber) async {
+    if (_currentGame == null) return;
+
+    try {
+      _currentGame!.currentHole = holeNumber;
+      await _currentGame!.save();
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to update current hole: $e';
+      notifyListeners();
+    }
+  }
+
+  void setCurrentGame(Game game) {
+    _currentGame = game;
+    notifyListeners();
   }
 }
 
